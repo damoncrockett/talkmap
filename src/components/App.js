@@ -57,7 +57,7 @@ export default function App() {
 
         plotSummaryCoords(summaries, summaryCoords, svg);
     
-    }, [summaryCoords]); // Depend on summaries as well since they're used in rendering
+    }, [summaryCoords]);
     
     
     return (
