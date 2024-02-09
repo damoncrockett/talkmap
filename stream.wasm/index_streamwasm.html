@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-us">
+    <head>
+    </head>
+    <body>
+        <div id="main-container">
+            <div id="model-whisper">
+                Whisper model: <span id="model-whisper-status"></span>
+                <button id="fetch-whisper-tiny-en" onclick="loadWhisper('tiny.en')">tiny.en (75 MB)</button>
+                <button id="fetch-whisper-base-en" onclick="loadWhisper('base.en')">base.en (142 MB)</button>
+                <br><br>
+                Quantized models:<br><br>
+                <button id="fetch-whisper-tiny-en-q5_1"   onclick="loadWhisper('tiny-en-q5_1')">tiny.en (Q5_1, 31 MB)</button>
+                <button id="fetch-whisper-base-en-q5_1"   onclick="loadWhisper('base-en-q5_1')">base.en (Q5_1, 57 MB)</button>
+                <span id="fetch-whisper-progress"></span>
+
+                <!--
+                    <input type="file" id="file" name="file" onchange="loadFile(event, 'whisper.bin')" />
+                -->
+            </div>
+
+            <br>
+
+            <div id="input">
+                <button id="start"  onclick="onStart()" disabled>Start</button>
+                <button id="stop"   onclick="onStop()" disabled>Stop</button>
+                <button id="clear"  onclick="clearCache()">Clear Cache</button>
+            </div>
+
+            <br>
+
+            <div id="state">
+                Status: <b><span id="state-status">not started</span></b>
+
+                <pre id="state-transcribed">[The transcribed text will be displayed here]</pre>
+            </div>
+
+            <hr>
+
+            Debug output:
+            <textarea id="output" rows="20"></textarea>
+
+            
+        </div>
+    </body>
+</html>
