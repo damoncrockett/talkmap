@@ -1,0 +1,7 @@
+- Typically, when something is "removed" by the large model, it was a mis-transcription
+- Large model has better punctuation, for sure, which creates a lot of trivial diffs
+- Getting a good transcription is both harder than I thought, and extremely important to getting correct embeddings
+- Sometimes the large model will repeat a work like "Yeah" a bunch of times. Maybe an issue with the YouTube download.
+- I will need to embed pretty big chunks I think, as a kind of averaging strategy. Small chunks won't be accurate enough to enbed well.
+
+

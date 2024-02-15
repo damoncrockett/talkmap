@@ -1,12 +1,16 @@
 // Common Javascript functions used by the examples
 
+let dbVersion = 1
+let dbName    = 'whisper.ggerganov.com';
+let indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB
+
 function convertTypedArray(src, type) {
     var buffer = new ArrayBuffer(src.byteLength);
     var baseView = new src.constructor(buffer).set(src);
     return new type(buffer);
 }
 
-var printTextarea = (function() {
+export var printTextarea = (function() {
     var element = document.getElementById('output');
     if (element) element.value = ''; // clear browser cache
     return function(text) {
@@ -19,7 +23,7 @@ var printTextarea = (function() {
     };
 })();
 
-async function clearCache() {
+export async function clearCache() {
     if (confirm('Are you sure you want to clear the cache?\nAll the models will be downloaded again.')) {
         indexedDB.deleteDatabase(dbName);
         location.reload();
@@ -34,6 +38,7 @@ async function fetchRemote(url, cbProgress, cbPrint) {
         url,
         {
             method: 'GET',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/octet-stream',
             },
@@ -88,7 +93,7 @@ async function fetchRemote(url, cbProgress, cbPrint) {
 // load remote data
 // - check if the data is already in the IndexedDB
 // - if not, fetch it from the remote URL and store it in the IndexedDB
-function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbCancel, cbPrint) {
+export function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbPrint) {
     if (!navigator.storage || !navigator.storage.estimate) {
         cbPrint('loadRemote: navigator.storage.estimate() is not supported');
     } else {
@@ -134,7 +139,6 @@ function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbCancel, cbPrint) {
                     'You are about to download ' + size_mb + ' MB of data.\n' +
                     'The model data will be cached in the browser for future use.\n\n' +
                     'Press OK to continue.')) {
-                    cbCancel();
                     return;
                 }
 
@@ -152,7 +156,6 @@ function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbCancel, cbPrint) {
                                 var rq = os.put(data, url);
                             } catch (e) {
                                 cbPrint('loadRemote: failed to store "' + url + '" in the IndexedDB: \n' + e);
-                                cbCancel();
                                 return;
                             }
 
@@ -163,7 +166,6 @@ function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbCancel, cbPrint) {
 
                             rq.onerror = function (event) {
                                 cbPrint('loadRemote: failed to store "' + url + '" in the IndexedDB');
-                                cbCancel();
                             };
                         };
                     }
@@ -173,22 +175,18 @@ function loadRemote(url, dst, size_mb, cbProgress, cbReady, cbCancel, cbPrint) {
 
         rq.onerror = function (event) {
             cbPrint('loadRemote: failed to get data from the IndexedDB');
-            cbCancel();
         };
     };
 
     rq.onerror = function (event) {
         cbPrint('loadRemote: failed to open IndexedDB');
-        cbCancel();
     };
 
     rq.onblocked = function (event) {
         cbPrint('loadRemote: failed to open IndexedDB: blocked');
-        cbCancel();
     };
 
     rq.onabort = function (event) {
         cbPrint('loadRemote: failed to open IndexedDB: abort');
-        cbCancel();
     };
 }

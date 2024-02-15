@@ -1,3 +1,10 @@
+import { loadRemote, printTextarea } from './helpers';
+
+function returnDomain() {
+    const production = process.env.NODE_ENV === 'production';
+    return production ? 'https://whisper.ggerganov.com/' : 'http://localhost:8888/'
+  }
+
 // web audio context
 var context = null;
 
@@ -27,13 +34,11 @@ var Module = {
     }
 };
 
+console.log(Module);
+
 //
 // fetch models
 //
-
-let dbVersion = 1
-let dbName    = 'whisper.ggerganov.com';
-let indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB
 
 function storeFS(fname, buf) {
     // write to WASM file using FS_createDataFile
@@ -50,60 +55,22 @@ function storeFS(fname, buf) {
 
     document.getElementById('model-whisper-status').innerHTML = 'loaded "' + model_whisper + '"!';
 
-    if (model_whisper != null) {
-        document.getElementById('start').disabled = false;
-        document.getElementById('stop' ).disabled = true;
-    }
 }
 
-function loadWhisper(model) {
-    let urls = {
-        'tiny.en': 'https://whisper.ggerganov.com/ggml-model-whisper-tiny.en.bin',
-        'base.en': 'https://whisper.ggerganov.com/ggml-model-whisper-base.en.bin',
-
-        'tiny-en-q5_1':  'https://whisper.ggerganov.com/ggml-model-whisper-tiny.en-q5_1.bin',
-        'base-en-q5_1':  'https://whisper.ggerganov.com/ggml-model-whisper-base.en-q5_1.bin',
-    };
-
-    let sizes = {
-        'tiny.en': 75,
-        'base.en': 142,
-
-        'tiny-en-q5_1':   31,
-        'base-en-q5_1':   57,
-    };
-
-    let url     = urls[model];
+export function loadWhisper(model) {
+  
+    let url     = returnDomain() + 'ggml-model-whisper-tiny.en-q5_1.bin';
     let dst     = 'whisper.bin';
-    let size_mb = sizes[model];
+    let size_mb = 31;
 
     model_whisper = model;
 
-    document.getElementById('fetch-whisper-tiny-en').style.display = 'none';
-    document.getElementById('fetch-whisper-base-en').style.display = 'none';
-
-    document.getElementById('fetch-whisper-tiny-en-q5_1').style.display = 'none';
-    document.getElementById('fetch-whisper-base-en-q5_1').style.display = 'none';
-
-    document.getElementById('model-whisper-status').innerHTML = 'loading "' + model + '" ... ';
-
-    cbProgress = function(p) {
-        let el = document.getElementById('fetch-whisper-progress');
-        el.innerHTML = Math.round(100*p) + '%';
+    const cbProgress = function(p) {
+        // let el = document.getElementById('fetch-whisper-progress');
+        // el.innerHTML = Math.round(100*p) + '%';
     };
 
-    cbCancel = function() {
-        var el;
-        el = document.getElementById('fetch-whisper-tiny-en'); if (el) el.style.display = 'inline-block';
-        el = document.getElementById('fetch-whisper-base-en'); if (el) el.style.display = 'inline-block';
-
-        el = document.getElementById('fetch-whisper-tiny-en-q5_1'); if (el) el.style.display = 'inline-block';
-        el = document.getElementById('fetch-whisper-base-en-q5_1'); if (el) el.style.display = 'inline-block';
-
-        el = document.getElementById('model-whisper-status');  if (el) el.innerHTML = '';
-    };
-
-    loadRemote(url, dst, size_mb, cbProgress, storeFS, cbCancel, printTextarea);
+    loadRemote(url, dst, size_mb, cbProgress, storeFS, printTextarea);
 }
 
 //
@@ -122,7 +89,7 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
 
 function stopRecording() {
-    Module.set_status("paused");
+    Module.setStatus("paused");
     doRecording = false;
     audio0 = null;
     audio = null;
@@ -140,10 +107,10 @@ function startRecording() {
         });
     }
 
-    Module.set_status("");
+    Module.setStatus("");
 
-    document.getElementById('start').disabled = true;
-    document.getElementById('stop').disabled = false;
+    // document.getElementById('start').disabled = true;
+    // document.getElementById('stop').disabled = false;
 
     doRecording = true;
     startTime = Date.now();
@@ -219,8 +186,8 @@ function startRecording() {
                 track.stop();
             });
 
-            document.getElementById('start').disabled = false;
-            document.getElementById('stop').disabled  = true;
+            // document.getElementById('start').disabled = false;
+            // document.getElementById('stop').disabled  = true;
 
             mediaRecorder = null;
         }
@@ -250,7 +217,7 @@ var nLines = 0;
 var intervalUpdate = null;
 var transcribedAll = '';
 
-function onStart() {
+export function onStart() {
     if (!instance) {
         instance = Module.init('whisper.bin');
 
@@ -283,11 +250,11 @@ function onStart() {
             }
         }
 
-        document.getElementById('state-status').innerHTML = Module.get_status();
-        document.getElementById('state-transcribed').innerHTML = transcribedAll;
+        // document.getElementById('state-status').innerHTML = Module.get_status();
+        // document.getElementById('state-transcribed').innerHTML = transcribedAll;
     }, 100);
 }
 
-function onStop() {
+export function onStop() {
     stopRecording();
 }

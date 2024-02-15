@@ -1,31 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { pipeline } from '@xenova/transformers';
 import { PCA } from 'ml-pca';
 import { normalizeCoordinates, toScreenCoordinates } from '../../utils/coords';
 import { chooseThreeMostImportantWords } from '../../utils/text';
 import { select } from 'd3-selection';
 import { plotSummaryCoords } from '../../utils/plot';
-
-const embedder = await pipeline('feature-extraction', 'nomic-ai/nomic-embed-text-v1');
+import Whisper from './Whisper';
+import { embedder } from './Loading';
 
 export default function App() {
     const [passage, setPassage] = useState('');
     const [summaries, setSummaries] = useState([]);
     const [embeddings, setEmbeddings] = useState([]);
     const [summaryCoords, setSummaryCoords] = useState([]);
-    const inputRef = useRef();
     const svgRef = useRef();
-
-    function handleKeyDown(event) {
-        if (event.key === 'Enter') {
-            handleButtonClick(); // Call the function to handle submission
-        }
-    }
-
-    const handleButtonClick = () => {
-        setPassage(inputRef.current.value);
-        inputRef.current.value = ''; // Clear the input field
-    };
 
     useEffect(() => {
         async function processInput() {
@@ -63,8 +50,7 @@ export default function App() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <div style={{ marginBottom: '10px' }}> {/* Ensure this div doesn't grow and only takes necessary space */}
-                <input ref={inputRef} onKeyDown={handleKeyDown} />
-                <button onClick={handleButtonClick}>SUMMARIZE</button>
+                <Whisper />
             </div>
             <svg ref={svgRef} style={{ flexGrow: 1 }} width="100%" height="100%"></svg>
         </div>
