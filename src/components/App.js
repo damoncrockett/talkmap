@@ -41,8 +41,12 @@ export default function App() {
             const normalizedCoordinates = normalizeCoordinates(pcaEmbeddings);
             const screenCoords = toScreenCoordinates(normalizedCoordinates, svgRef.current.clientWidth, svgRef.current.clientHeight, 100);
     
-            // Update states together to ensure they are synchronized
-            setSummaries(prevSummaries => [...prevSummaries, chooseThreeMostImportantWords(passage)]);
+            // Update states together to ensure they are synchronized            
+            // setSummaries(prevSummaries => [...prevSummaries, chooseThreeMostImportantWords(passage)]);
+
+            // summaries should just be an array of integers-as-strings, like a simple index
+            setSummaries(prevSummaries => [...prevSummaries, summaries.length.toString()]);
+
             setEmbeddings(newEmbeddings); 
             setSummaryCoords(screenCoords); 
         }
