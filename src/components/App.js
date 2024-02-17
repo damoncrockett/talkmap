@@ -6,6 +6,7 @@ import { select } from 'd3-selection';
 import { plotSummaryCoords } from '../../utils/plot';
 import Whisper from './Whisper';
 import { embedder } from './Loading';
+import basemap from '../../assets/json/basemap.json';
 
 export default function App() {
     const [passage, setPassage] = useState('');
@@ -16,10 +17,10 @@ export default function App() {
 
     useEffect(() => {
         async function processInput() {
-            if (!passage) return; // Exit early if there's no passage to process
+            if (!passage) return; 
            
             const embedding = await embedder(passage, { pooling: 'mean', normalize: true });
-            const newEmbeddings = [...embeddings, embedding["data"]]; // Temporary variable to hold new state
+            const newEmbeddings = [...embeddings, embedding["data"]];
     
             const twoDimArrays = newEmbeddings.map(d => Array.from(d));
             const fitPCA = new PCA(twoDimArrays);
@@ -28,7 +29,6 @@ export default function App() {
             const normalizedCoordinates = normalizeCoordinates(pcaEmbeddings);
             const screenCoords = toScreenCoordinates(normalizedCoordinates, svgRef.current.clientWidth, svgRef.current.clientHeight, 100);
     
-            // Update states together to ensure they are synchronized
             setSummaries(prevSummaries => [...prevSummaries, chooseThreeMostImportantWords(passage)]);
             setEmbeddings(newEmbeddings); 
             setSummaryCoords(screenCoords); 
