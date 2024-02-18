@@ -2,7 +2,7 @@ import { forceSimulation, forceManyBody, forceX, forceY, forceCollide } from 'd3
 import { transition } from 'd3-transition';
 import { select } from 'd3-selection';
 
-export const plotSummaryCoords = (summaries, summaryCoords, svg) => {
+export const plotSummaryCoords = (summaries, summaryCoords, svg, excludeRectRange = null) => {
     
     // Create a force simulation to prevent overlapping summaries
     const simulation = forceSimulation(summaryCoords)
@@ -27,19 +27,23 @@ export const plotSummaryCoords = (summaries, summaryCoords, svg) => {
         .append('g')
         .attr('transform', d => `translate(${d.left},${d.top})`); // Initial position
 
-    enterGroup.append('rect')
-        .attr('width', 100) // Initial width, adjust based on expected text width
-        .attr('height', 40) // Fixed height
-        .attr('rx', 20) // Rounded corners
-        .attr('ry', 20)
+    // Append rects conditionally
+    enterGroup.filter((_, i) => !excludeRectRange || (i < excludeRectRange.start || i > excludeRectRange.end))
+        .append('rect')
+        .attr('class', 'rect-included') // Add class for styling
+        .attr('width', 100)
+        .attr('height', 40)
+        .attr('rx', 20)
+        .attr('ry', 20);
 
     const padding = 10;
 
+    // Append text elements
     enterGroup.append('text')
         .attr('x', padding)
-        .attr('y', 20) // Center text vertically
+        .attr('y', 20)
         .attr('dominant-baseline', 'middle')
-        .style('fill', 'black')
+        .attr('class', (_, i) => excludeRectRange && (i >= excludeRectRange.start && i <= excludeRectRange.end) ? 'text-excluded' : 'text-included') // Apply class based on condition
         .text((_, i) => summaries[i]);
 
     // Merge entering elements with updating ones to apply transitions
@@ -51,10 +55,12 @@ export const plotSummaryCoords = (summaries, summaryCoords, svg) => {
 
     summariesGroup.select('text')
         .each(function(d, i) {
-            const textWidth = this.getComputedTextLength();
-            const rectWidth = textWidth + 2 * padding;
-            select(this.previousSibling) // Assuming the rectangle is immediately before the text in the DOM
-                .transition().duration(duration)
-                .attr('width', rectWidth);
+            if (!excludeRectRange || (i < excludeRectRange.start || i > excludeRectRange.end)) {
+                const textWidth = this.getComputedTextLength();
+                const rectWidth = textWidth + 2 * padding;
+                select(this.previousSibling) // Assuming the rectangle is immediately before the text in the DOM
+                    .transition().duration(duration)
+                    .attr('width', rectWidth);
+            }
         });
 };
