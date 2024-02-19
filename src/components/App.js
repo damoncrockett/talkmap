@@ -40,14 +40,12 @@ export default function App() {
     }
 
     useEffect(() => {
-        // Initialize or update the embedder when the component mounts or the model changes
         initializeEmbedder(embeddingModel, embedderRef, setVersion);
-    }, [embeddingModel]); // Dependency on embeddingModel
+    }, [embeddingModel]);
 
-    // Updated useEffect for basemap processing to include embedder in its dependency array
     useEffect(() => {
         async function processBasemapOnMount() {
-            if (basemap.length === 0 || basemapExists || !embedderRef.current) return; // Now also checks if embedder is loaded
+            if (basemap.length === 0 || !embedderRef.current) return; // Now also checks if embedder is loaded
 
             const svgWidth = svgRef.current.clientWidth;
             const svgHeight = svgRef.current.clientHeight;
