@@ -1,49 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { pipeline } from '@xenova/transformers';
-import { PCA } from 'ml-pca';
-import { normalizeCoordinates, toScreenCoordinates } from '../../utils/coords';
-// import { chooseThreeMostImportantWords } from '../../utils/text';
 import { select } from 'd3-selection';
 import { plotSummaryCoords } from '../../utils/plot';
 import basemap from '../../src/assets/json/basemap.json';
+import { embeddingModels, initializeEmbedder } from '../../utils/embed';
+import { reduceEmbeddings } from '../../utils/reduce';
 
-const embedder = await pipeline('feature-extraction', 'nomic-ai/nomic-embed-text-v1');
-
-async function getEmbeddings(basemap) {
-    const basemapEmbeddings = await Promise.all(
-        basemap.map(async passage => {
-            const embedding = await embedder(passage, { pooling: 'mean', normalize: true });
-            return embedding["data"];
-        })
-    );
-    return basemapEmbeddings;
-}
-
-async function processBasemap(basemap, width, height) {
-
-    basemapEmbeddings = await getEmbeddings(basemap);
-    const basemapTwoDimArrays = basemapEmbeddings.map(d => Array.from(d));
-
-    pca = new PCA(basemapTwoDimArrays);
-    const basemapEmbeddingsPCA = pca.predict(basemapTwoDimArrays)["data"].map(d => Array.from(d.slice(0, 2)));
-
-    const basemapNormalizedCoordinates = normalizeCoordinates(basemapEmbeddingsPCA);
-
-    return toScreenCoordinates(basemapNormalizedCoordinates, width, height, 100);
-}
-
-let basemapEmbeddings;
 let pca;
 
 export default function App() {
     const [passage, setPassage] = useState('');
-    const [summaries, setSummaries] = useState([]);
+    const [samples, setSamples] = useState([]);
+    const [embeddingModel, setEmbeddingModel] = useState(embeddingModels[0]);
     const [embeddings, setEmbeddings] = useState([]);
-    const [summaryCoords, setSummaryCoords] = useState([]);
+    const [sampleCoords, setSampleCoords] = useState([]);
     const [basemapExists, setBasemapExists] = useState(false);
     const [basemapLocked, setBasemapLocked] = useState(false);    
     const inputRef = useRef();
     const svgRef = useRef();
+    const embedderRef = useRef(null);
+    const [version, setVersion] = useState(0);
+
+    function handleModelChange(event) {
+        setEmbeddingModel(event.target.value);
+    }
 
     function handleKeyDown(event) {
         if (event.key === 'Enter') {
@@ -61,63 +40,62 @@ export default function App() {
     }
 
     useEffect(() => {
-        // This effect now includes basemap processing
-        async function processBasemapOnMount() {
-            if (basemap.length === 0 || basemapExists) return;
+        // Initialize or update the embedder when the component mounts or the model changes
+        initializeEmbedder(embeddingModel, embedderRef, setVersion);
+    }, [embeddingModel]); // Dependency on embeddingModel
 
-            // Ensure SVG dimensions are available
+    // Updated useEffect for basemap processing to include embedder in its dependency array
+    useEffect(() => {
+        async function processBasemapOnMount() {
+            if (basemap.length === 0 || basemapExists || !embedderRef.current) return; // Now also checks if embedder is loaded
+
             const svgWidth = svgRef.current.clientWidth;
             const svgHeight = svgRef.current.clientHeight;
 
-            // Process basemap using SVG dimensions
-            const processedScreenCoords = await processBasemap(basemap, svgWidth, svgHeight);
-            
-            setSummaries(basemap); // Initialize summaries based on basemap
-            setEmbeddings(basemapEmbeddings); // Assume basemapEmbeddings is obtained similarly
-            setSummaryCoords(processedScreenCoords);
-            setBasemapExists(true); // Set basemap as processed
+            const { model, screenCoords } = await reduceEmbeddings(basemap, svgWidth, svgHeight, embedderRef, setEmbeddings);
+            pca = model;
+
+            setSamples(basemap);
+            setSampleCoords(screenCoords);
+            setBasemapExists(true);
         }
 
         processBasemapOnMount();
-    }, []); // Empty dependency array to run only once on mount
+    }, [version]);
 
     useEffect(() => {
         async function processInput() {
-            if (!passage) return; // Exit early if there's no passage to process
-           
-            const embedding = await embedder(passage, { pooling: 'mean', normalize: true });
-            const newEmbeddings = [...embeddings, embedding["data"]]; // Temporary variable to hold new state
-    
-            const twoDimArrays = newEmbeddings.map(d => Array.from(d));
-            
-            const fitPCA = basemapLocked ? pca : new PCA(twoDimArrays);
-            const pcaEmbeddings = fitPCA.predict(twoDimArrays)["data"].map(d => Array.from(d.slice(0, 2)));
-    
-            const normalizedCoordinates = normalizeCoordinates(pcaEmbeddings);
-            const screenCoords = toScreenCoordinates(normalizedCoordinates, svgRef.current.clientWidth, svgRef.current.clientHeight, 100);
-    
-            // setSummaries(prevSummaries => [...prevSummaries, chooseThreeMostImportantWords(passage)]);
-            setSummaries(prevSummaries => [...prevSummaries, passage]);
+            if (!passage || !embedderRef.current) return; // Exit early if there's no passage to process
 
-            setEmbeddings(newEmbeddings); 
-            setSummaryCoords(screenCoords); 
+            const svgWidth = svgRef.current.clientWidth;
+            const svgHeight = svgRef.current.clientHeight;
+
+            let screenCoords;
+            if ( basemapLocked ) {
+                ({ screenCoords } = await reduceEmbeddings([passage], svgWidth, svgHeight, embedderRef, setEmbeddings, embeddings, pca));
+            } else {
+                ({ screenCoords } = await reduceEmbeddings([passage], svgWidth, svgHeight, embedderRef, setEmbeddings, embeddings));
+            }
+            
+            setSamples(prevSamples => [...prevSamples, passage]);
+            setSampleCoords(screenCoords); 
         }
     
         processInput();
     }, [passage]);
 
     useEffect(() => {
-        if (summaryCoords.length === 0) return;
+        if (sampleCoords.length === 0) return;
     
         const svg = select(svgRef.current);
 
         if ( basemapExists ) {
-            plotSummaryCoords(summaries, summaryCoords, svg, { start: 0, end: 10 });
+            plotSummaryCoords(samples, sampleCoords, svg, { start: 0, end: 10 });
         } else {
-            plotSummaryCoords(summaries, summaryCoords, svg);
+            plotSummaryCoords(samples, sampleCoords, svg);
         }
 
-    }, [summaryCoords]);
+    }, [sampleCoords, version]);
     
     
     return (
@@ -126,6 +104,13 @@ export default function App() {
                 <input ref={inputRef} onKeyDown={handleKeyDown} />
                 <button onClick={handleButtonClick}>MAP</button>
                 <button className={basemapLocked ? 'locked' : 'unlocked'} onClick={handleLockBasemap}>LOCK BASEMAP</button>
+                <select onChange={handleModelChange} value={embeddingModel}>
+                    {embeddingModels.map(model => (
+                        <option key={model} value={model}>
+                            {model}
+                        </option>
+                    ))}
+                </select>
             </div>
             <svg ref={svgRef} style={{ flexGrow: 1 }} width="100%" height="100%"></svg>
         </div>
